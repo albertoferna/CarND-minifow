@@ -1,65 +1,80 @@
-"""
-Fix the Sigmoid class so that it computes the sigmoid function
-on the forward pass!
-
-Scroll down to get started.
-"""
-
 import numpy as np
 
-
 class Layer:
+    """
+    Base class for layers in the network.
+
+    Arguments:
+
+        `inbound_layers`: A list of layers with edges into this layer.
+    """
     def __init__(self, inbound_layers=[]):
+        """
+        Layer's constructor (runs when the object is instantiated). Sets
+        properties that all layers need.
+        """
+        # A list of layers with edges into this layer.
         self.inbound_layers = inbound_layers
+        # The eventual value of this layer. Set by running
+        # the forward() method.
         self.value = None
+        # A list of layers that this layer outputs to.
         self.outbound_layers = []
+        # Sets this layer as an outbound layer for all of
+        # this layer's inputs.
         for layer in inbound_layers:
             layer.outbound_layers.append(self)
 
-    def forward():
-        raise NotImplementedError
-
-    def backward():
+    def forward(self):
+        """
+        Every layer that uses this class as a base class will
+        need to define its own `forward` method.
+        """
         raise NotImplementedError
 
 
 class Input(Layer):
+    """
+    A generic input into the network.
+    """
     def __init__(self):
-        # An Input layer has no inbound layers,
-        # so no need to pass anything to the Layer instantiator
+        # The base class constructor has to run to set all
+        # the properties here.
+        #
+        # The most important property on an Input is value.
+        # self.value is set during `topological_sort` later.
         Layer.__init__(self)
 
     def forward(self):
         # Do nothing because nothing is calculated.
         pass
 
-    def backward(self):
-        # An Input Layer has no inputs so we refer to ourself
-        # for the gradient
-        self.gradients = {self: 0}
-        for n in self.outbound_Layers:
-            self.gradients[self] += n.gradients[self]
-
 
 class Linear(Layer):
-    def __init__(self, inbound_layer, weights, bias):
-        # Notice the ordering of the input layers passed to the
-        # Layer constructor.
-        Layer.__init__(self, [inbound_layer, weights, bias])
+    """
+    Represents a layer that performs a linear transform.
+    """
+    def __init__(self, X, W, b):
+        # The base class (Layer) constructor. Weights and bias
+        # are treated like inbound layers.
+        Layer.__init__(self, [X, W, b])
 
     def forward(self):
-        inputs = self.inbound_layers[0].value
-        weights = self.inbound_layers[1].value
-        bias = self.inbound_layers[2].value
-        self.value = np.dot(inputs, weights) + bias
+        """
+        Performs the math behind a linear transform.
+        """
+        X = self.inbound_layers[0].value
+        W = self.inbound_layers[1].value
+        b = self.inbound_layers[2].value
+        self.value = np.dot(X, W) + b
 
 
 class Sigmoid(Layer):
     """
-    You need to fix the `_sigmoid` and `forward` methods.
+    Represents a layer that performs the sigmoid activation function.
     """
-
     def __init__(self, layer):
+        # The base class constructor.
         Layer.__init__(self, [layer])
 
     def _sigmoid(self, x):
@@ -68,24 +83,44 @@ class Sigmoid(Layer):
         will be used with `backward` as well.
 
         `x`: A numpy array-like object.
-
-        Return the result of the sigmoid function.
-
-        Your code here!
         """
-        return 1 / (np.exp(-x) + 1)
+        return 1. / (1. + np.exp(-x))
 
     def forward(self):
         """
-        Set the value of this layer to the result of the
-        sigmoid function, `_sigmoid`.
-
-        Your code here!
+        Perform the sigmoid function and set the value.
         """
-        # This is a dummy value to prevent numpy errors
-        # if you test without changing this method.
-        input = self.inbound_layers[0].value
-        self.value = self._sigmoid(input)
+        input_value = self.inbound_layers[0].value
+        self.value = self._sigmoid(input_value)
+
+
+class MSE(Layer):
+    def __init__(self, y, a):
+        """
+        The mean squared error cost function.
+        Should be used as the last layer for a network.
+        """
+        # Call the base class' constructor.
+        Layer.__init__(self, [y, a])
+
+    def forward(self):
+        """
+        Calculates the mean squared error.
+        """
+        # NOTE: We reshape these to avoid possible matrix/vector broadcast
+        # errors.
+        #
+        # For example, if we subtract an array of shape (3,) from an array of shape
+        # (3,1) we get an array of shape(3,3) as the result when we want
+        # an array of shape (3,1) instead.
+        #
+        # Making both arrays (3,1) insures the result is (3,1) and does
+        # an elementwise subtraction as expected.
+        y = self.inbound_layers[0].value.reshape(-1, 1)
+        a = self.inbound_layers[1].value.reshape(-1, 1)
+        squared = np.square(y - a)
+        self.value = squared.sum() / len(squared)
+        return
 
 
 def topological_sort(feed_dict):
@@ -93,7 +128,7 @@ def topological_sort(feed_dict):
     Sort the layers in topological order using Kahn's Algorithm.
 
     `feed_dict`: A dictionary where the key is a `Input` Layer and the value
-     is the respective value feed to that Layer.
+    is the respective value feed to that Layer.
 
     Returns a list of sorted layers.
     """
@@ -131,20 +166,14 @@ def topological_sort(feed_dict):
     return L
 
 
-def forward_pass(output_layer, sorted_layers):
+def forward_pass(graph):
     """
     Performs a forward pass through a list of sorted Layers.
 
     Arguments:
 
-        `output_layer`: A Layer in the graph, should be the output layer
-         (have no outgoing edges).
-        `sorted_layers`: a topologically sorted list of layers.
-
-    Returns the output layer's value
+        `graph`: The result of calling `topological_sort`.
     """
-
-    for n in sorted_layers:
+    # Forward pass
+    for n in graph:
         n.forward()
-
-    return output_layer.value
