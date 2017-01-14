@@ -1,13 +1,10 @@
 """
-Bonus Challenge!
-
-Write your code in Add (scroll down).
+Write the Linear#forward method below!
 """
 
+
 class Neuron:
-    def __init__(self, inbound_neurons=[], label=''):
-        # An optional description of the neuron - most useful for outputs.
-        self.label = label
+    def __init__(self, inbound_neurons=[]):
         # Neurons from which this Node receives values
         self.inbound_neurons = inbound_neurons
         # Neurons to which this Node passes values
@@ -17,7 +14,6 @@ class Neuron:
         # Add this node as an outbound node on its inputs.
         for n in self.inbound_neurons:
             n.outbound_neurons.append(self)
-
 
     # These will be implemented in a subclass.
     def forward(self):
@@ -29,16 +25,6 @@ class Neuron:
         """
         raise NotImplemented
 
-    def backward(self):
-        """
-        Backward propagation.
-
-        Compute the gradient of the current Neuron with respect
-        to the input neurons. The gradient of the loss with respect
-        to the current Neuron should already be computed in the `gradients`
-        attribute of the output neurons.
-        """
-        raise NotImplemented
 
 class Input(Neuron):
     def __init__(self):
@@ -46,66 +32,44 @@ class Input(Neuron):
         # so no need to pass anything to the Neuron instantiator
         Neuron.__init__(self)
 
-    # NOTE: Input Neuron is the only Neuron where the value
-    # may be passed as an argument to forward().
-    #
-    # All other Neuron implementations should get the value
-    # of the previous neurons from self.inbound_neurons
-    #
-    # Example:
-    # val0 = self.inbound_neurons[0].value
+        # NOTE: Input Neuron is the only Neuron where the value
+        # may be passed as an argument to forward().
+        #
+        # All other Neuron implementations should get the value
+        # of the previous neurons from self.inbound_neurons
+        #
+        # Example:
+        # val0 = self.inbound_neurons[0].value
+
     def forward(self, value=None):
         # Overwrite the value if one is passed in.
         if value is not None:
             self.value = value
 
-    def backward(self):
-        # An Input Neuron has no inputs so we refer to ourself
-        # for the gradient
-        self.gradients = {self: 0}
-        for n in self.outbound_neurons:
-            self.gradients[self] += n.gradients[self]
 
-
-"""
-Can you augment the Add class so that it accepts
-any number of neurons as input?
-
-Hint: this may be useful:
-https://docs.python.org/3/tutorial/controlflow.html#unpacking-argument-lists
-"""
-class Add(Neuron):
-    # You may need to change this...
-    def __init__(self, *inputs):
+class Linear(Neuron):
+    def __init__(self, inputs, weights, bias):
         Neuron.__init__(self, inputs)
+
+        # NOTE: The weights and bias properties here are not
+        # numbers, but rather references to other neurons.
+        # The weight and bias values are stored within the
+        # respective neurons.
+        self.weights = weights
+        self.bias = bias
 
     def forward(self):
         """
-        For reference, here's the old way from the last
-        quiz. You'll want to write code here.
-        """
-        # x_value = self.inbound_neurons[0].value
-        # y_value = self.inbound_neurons[1].value
-        # self.value = x_value + y_value
-        result = 0
-        for inbound in self.inbound_neurons:
-            result += inbound.value
-        self.value = result
+        Set self.value to the value of the linear function output.
 
-class Mul(Neuron):
-    # You may need to change this...
-    def __init__(self, *inputs):
-        Neuron.__init__(self, inputs)
+        Your code goes here!
+        """
+        value = 0
+        for w, i in zip(self.weights, self.inbound_neurons):
+            value += w.value * i.value
+        value += self.bias.value
+        self.value = value
 
-    def forward(self):
-        """
-        For reference, here's the old way from the last
-        quiz. You'll want to write code here.
-        """
-        result = 0
-        for inbound in self.inbound_neurons:
-            result *= inbound.value
-        self.value = result
 
 def topological_sort(feed_dict):
     """
