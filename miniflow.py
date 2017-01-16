@@ -151,13 +151,9 @@ class Sigmoid(Layer):
         for n in self.outbound_layers:
             # Get the partial of the cost with respect to this layer.
             grad_cost = n.gradients[self]
-            """
-            TODO: Your code goes here!
+            value = self.value
+            self.gradients[self.inbound_layers[0]] += value * (1 - value) * grad_cost
 
-            Set the gradients property to the gradients with respect to each input.
-
-            NOTE: See the Linear layer and MSE layer for examples.
-            """
 
 
 class MSE(Layer):
